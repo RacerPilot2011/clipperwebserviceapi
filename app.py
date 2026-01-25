@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import hashlib
 
@@ -16,7 +16,7 @@ UPLOAD_FOLDER.mkdir(exist_ok=True)
 METADATA_FILE = Path('clips_metadata.json')
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB limit
 
-# Base URL - change this when deploying
+# Base URL
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
 
 # Initialize metadata file
@@ -71,7 +71,7 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_clip():
-    """Handle clip upload"""
+    """Handle clip upload with username"""
     try:
         # Check if file is in request
         if 'file' not in request.files:
@@ -81,6 +81,10 @@ def upload_clip():
         
         if file.filename == '':
             return jsonify({"error": "No file selected"}), 400
+        
+        # Get username from form data (optional)
+        username = request.form.get('username', 'Anonymous')
+        username = username.strip() or 'Anonymous'
         
         # Validate file type
         allowed_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.webm'}
@@ -101,12 +105,18 @@ def upload_clip():
         file_size = filepath.stat().st_size
         file_hash = get_file_hash(filepath)
         
+        # Get current time in UTC and local timezone
+        utc_now = datetime.now(timezone.utc)
+        local_time = datetime.now()
+        
         # Create metadata entry
         clip_data = {
             "clip_id": clip_id,
             "filename": safe_filename,
             "original_filename": file.filename,
-            "upload_time": datetime.now().isoformat(),
+            "username": username,
+            "upload_time": utc_now.isoformat(),
+            "upload_time_local": local_time.isoformat(),
             "file_size": file_size,
             "file_hash": file_hash,
             "url": f"{BASE_URL}/clips/{clip_id}"
@@ -120,6 +130,7 @@ def upload_clip():
         return jsonify({
             "success": True,
             "clip_id": clip_id,
+            "username": username,
             "url": f"{BASE_URL}/view/{clip_id}",
             "download_url": f"{BASE_URL}/clips/{clip_id}",
             "message": "Clip uploaded successfully"
