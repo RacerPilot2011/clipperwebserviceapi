@@ -16,7 +16,7 @@ UPLOAD_FOLDER.mkdir(exist_ok=True)
 METADATA_FILE = Path('clips_metadata.json')
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB limit
 
-# Base URL
+# Base URL - change this when deploying
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
 
 # Initialize metadata file
@@ -205,20 +205,61 @@ def delete_clip(clip_id):
 
 @app.route('/view/<clip_id>')
 def view_clip(clip_id):
-    """Serve the web viewer page for a specific clip"""
-    # This will be handled by the frontend
-    return f"""
+    """Redirect to web viewer with clip ID"""
+    # Get the web frontend URL from environment or use default
+    web_frontend_url = os.getenv('WEB_FRONTEND_URL', 'http://localhost:8000')
+    return """
     <!DOCTYPE html>
     <html>
     <head>
         <title>View Clip - {clip_id}</title>
-        <meta http-equiv="refresh" content="0; url=/?clip={clip_id}">
+        <meta http-equiv="refresh" content="0; url={web_frontend_url}?id={clip_id}">
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }}
+            .container {{
+                text-align: center;
+            }}
+            .spinner {{
+                border: 4px solid rgba(255,255,255,0.3);
+                border-top: 4px solid white;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 20px auto;
+            }}
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+        </style>
     </head>
     <body>
-        <p>Redirecting to viewer...</p>
+        <div class="container">
+            <div class="spinner"></div>
+            <h2>Redirecting to viewer...</h2>
+            <p>Clip ID: {clip_id}</p>
+            <p>
+                <a href="{web_frontend_url}?id={clip_id}" style="color: white;">
+                    Click here if not redirected
+                </a>
+            </p>
+        </div>
     </body>
     </html>
-    """
+    """.format(
+        clip_id=clip_id,
+        web_frontend_url=web_frontend_url
+    )
 
 
 if __name__ == '__main__':
